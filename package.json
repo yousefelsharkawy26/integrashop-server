@@ -1,0 +1,23 @@
+{
+  "name": "integrashop-server",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx server.ts",
+    "build": "esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs"
+  },
+  "dependencies": {
+    "@google/genai": "^2.11.0",
+    "esbuild": "^0.28.1",
+    "express": "^5.2.1",
+    "tsx": "^4.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
+  }
+}
