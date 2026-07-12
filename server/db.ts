@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Product, Category, Brand, User, Order, Review, Coupon, Address, CartItem } from '../src/types';
+import { Product, Category, Brand, User, Order, Review, Coupon, Address, CartItem } from '../types';
 
 // Simple seedable random number generator for determinism
 function createRandom(seed: number) {

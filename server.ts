@@ -1,14 +1,6 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import express from 'express';
-import path from 'path';
-import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI, Type } from '@google/genai';
+import { Type } from '@google/genai';
 import * as db from './server/db';
-import { Address } from './types';
+import express from 'express';
 
 // Initialize the database seed data
 db.initDb();
@@ -621,29 +613,13 @@ async function executeTool(name: string, args: any, userId: string): Promise<any
 }
 
 // ==========================================
-// Vite Integration & Dev Server Booting
+// Server Booting
 // ==========================================
 
-async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
-    // Development Mode
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa'
-    });
-    app.use(vite.middlewares);
-  } else {
-    // Production Mode
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
+if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Express server successfully running on http://localhost:${PORT} [ENV: ${process.env.NODE_ENV || 'development'}]`);
+    console.log(`Express server running on http://localhost:${PORT}`);
   });
 }
 
-startServer();
+export default app;
