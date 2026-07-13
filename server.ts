@@ -4,6 +4,7 @@ import express from 'express';
 
 // Initialize the database seed data
 db.initDb();
+db.buildAllSearchIndexes(); // Build AI search indexes after seeding
 
 const app = express();
 const PORT = 3000;
@@ -140,6 +141,25 @@ app.get('/api/products/:id', (req, res) => {
     return res.status(404).json({ error: 'Product not found' });
   }
   res.json(product);
+});
+
+// NEW: Dedicated AI Natural Language Product Search Endpoint
+// This endpoint is for AI agents / customer support assistants only
+app.get('/api/search/products', (req, res) => {
+  const { q, limit, category, brand } = req.query;
+
+  if (!q || typeof q !== 'string' || q.trim().length === 0) {
+    return res.status(400).json({ error: 'Missing required query parameter: q' });
+  }
+
+  const results = db.searchProductsAI(
+    q,
+    limit ? parseInt(String(limit)) : 5,
+    category ? String(category) : undefined,
+    brand ? String(brand) : undefined
+  );
+
+  res.json(results);
 });
 
 // 3. Cart APIs

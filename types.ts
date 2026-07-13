@@ -26,6 +26,13 @@ export interface Product {
   featured: boolean;
   specifications: Record<string, string>;
   reviews: Review[];
+  // AI search metadata (added for /api/search/products)
+  sku?: string;
+  model?: string;
+  series?: string;
+  manufacturer?: string;
+  keywords?: string[];
+  searchText?: string;
 }
 
 export interface Category {

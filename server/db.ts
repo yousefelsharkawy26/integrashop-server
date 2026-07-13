@@ -421,6 +421,139 @@ export function getProductById(id: string): Product | undefined {
   return products.find(p => p.id === id);
 }
 
+// ============================================
+// AI Natural Language Product Search
+// ============================================
+
+// Build a precomputed search index for every product (called once during seed)
+function buildSearchIndex(product: any): string {
+  const parts: string[] = [
+    product.title || '',
+    product.description || '',
+    product.brand || '',
+    product.category || '',
+    product.sku || '',
+    product.model || '',
+    product.series || '',
+    product.manufacturer || '',
+    ...(product.keywords || []),
+    ...Object.values(product.specifications || {})
+  ];
+  return parts.join(' ').toLowerCase();
+}
+
+// Initialize search index for all products (called after seeding)
+export function buildAllSearchIndexes() {
+  products.forEach(p => {
+    (p as any).searchText = buildSearchIndex(p);
+  });
+}
+
+// Simple weighted relevance scoring
+function calculateRelevanceScore(product: any, query: string, categoryFilter?: string, brandFilter?: string): { score: number; whyMatched: string[] } {
+  const q = query.toLowerCase().trim();
+  const searchText = (product.searchText || '').toLowerCase();
+  const title = (product.title || '').toLowerCase();
+  const description = (product.description || '').toLowerCase();
+  const keywords = (product.keywords || []).map((k: string) => k.toLowerCase());
+  const specs = Object.values(product.specifications || {}).join(' ').toLowerCase();
+
+  let score = 0;
+  const whyMatched: string[] = [];
+
+  // Exact title match (highest weight)
+  if (title.includes(q)) {
+    score += 0.40;
+    whyMatched.push('title');
+  }
+
+  // Keyword array match
+  if (keywords.some((k: string) => k.includes(q) || q.includes(k))) {
+    score += 0.25;
+    whyMatched.push('keywords');
+  }
+
+  // Model / SKU / Series match
+  if ((product.model || '').toLowerCase().includes(q) ||
+      (product.sku || '').toLowerCase().includes(q) ||
+      (product.series || '').toLowerCase().includes(q)) {
+    score += 0.20;
+    whyMatched.push('model/sku/series');
+  }
+
+  // Brand match
+  if ((product.brand || '').toLowerCase().includes(q) || (product.manufacturer || '').toLowerCase().includes(q)) {
+    score += 0.15;
+    whyMatched.push('brand');
+  }
+
+  // Category match
+  if ((product.category || '').toLowerCase().includes(q)) {
+    score += 0.10;
+    whyMatched.push('category');
+  }
+
+  // Description match
+  if (description.includes(q)) {
+    score += 0.12;
+    whyMatched.push('description');
+  }
+
+  // Specification match
+  if (specs.includes(q)) {
+    score += 0.08;
+    whyMatched.push('specifications');
+  }
+
+  // Full-text search index fallback
+  if (searchText.includes(q) && score < 0.1) {
+    score += 0.05;
+    whyMatched.push('search index');
+  }
+
+  // Bonus for price-related terms in query (under $X)
+  const priceMatch = q.match(/under\s*\$?(\d+)/i) || q.match(/less than\s*\$?(\d+)/i);
+  if (priceMatch && product.price <= parseInt(priceMatch[1])) {
+    score += 0.10;
+    whyMatched.push('price under ' + priceMatch[1]);
+  }
+
+  // Apply category/brand filters (hard filter)
+  if (categoryFilter && product.category !== categoryFilter) score = 0;
+  if (brandFilter && product.brand !== brandFilter) score = 0;
+
+  return {
+    score: Math.min(Math.max(score, 0), 1),
+    whyMatched: [...new Set(whyMatched)] // dedupe
+  };
+}
+
+// Main AI search function
+export function searchProductsAI(query: string, limit: number = 5, category?: string, brand?: string) {
+  if (!query || query.trim().length === 0) {
+    return { query, count: 0, results: [] };
+  }
+
+  const scored = products
+    .map(product => {
+      const { score, whyMatched } = calculateRelevanceScore(product, query, category, brand);
+      return { score, whyMatched, product };
+    })
+    .filter(r => r.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+
+  return {
+    query,
+    count: scored.length,
+    results: scored.map(r => ({
+      score: parseFloat(r.score.toFixed(2)),
+      whyMatched: r.whyMatched.length > 0 ? r.whyMatched : ['text match'],
+      product: r.product
+    }))
+  };
+}
+
 export function getUserByEmail(email: string): User | undefined {
   return users.find(u => u.email.toLowerCase() === email.toLowerCase());
 }
